@@ -1,61 +1,73 @@
 @echo off
-title Collate — Document Review
+setlocal enabledelayedexpansion
+title Collate
 echo.
-echo  ╔═══════════════════════════════════════════╗
-echo  ║  Collate — See every comment in one place ║
-echo  ╚═══════════════════════════════════════════╝
+echo   Collate - See every comment in one place
+echo   ─────────────────────────────────────────
 echo.
 
-:: ─── Kill any previous Collate server instances ───────────────────
-echo  Checking for previous instances...
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":5173 " ^| findstr "LISTENING"') do (
-    echo  Stopping previous instance (PID %%a)...
+:: ─── Check Node.js is available ───────────────────────────────────
+where node >nul 2>&1
+if errorlevel 1 (
+    echo   ERROR: Node.js is not installed or not on PATH.
+    echo   Download it from https://nodejs.org/
+    echo.
+    pause
+    exit /b 1
+)
+
+:: ─── Kill any previous Collate server on ports 5173/4173 ──────────
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":5173 " ^| findstr "LISTENING"') do (
+    echo   Stopping previous instance ^(PID %%a^)...
     taskkill /PID %%a /F >nul 2>&1
 )
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":4173 " ^| findstr "LISTENING"') do (
-    echo  Stopping previous preview instance (PID %%a)...
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":4173 " ^| findstr "LISTENING"') do (
     taskkill /PID %%a /F >nul 2>&1
 )
 
-:: ─── Check if production build exists ─────────────────────────────
-if not exist "%~dp0web\dist\index.html" (
+:: ─── Navigate to web directory ────────────────────────────────────
+cd /d "%~dp0web"
+
+:: ─── Install dependencies if needed ──────────────────────────────
+if not exist "node_modules" (
+    echo   Installing dependencies...
     echo.
-    echo  No production build found. Building...
-    echo.
-    cd /d "%~dp0web"
-    call npm run build
+    call npm install
     if errorlevel 1 (
         echo.
-        echo  Build failed. Please check for errors above.
+        echo   npm install failed. Check the output above.
         pause
         exit /b 1
     )
+    echo.
 )
 
-:: ─── Serve the production build ───────────────────────────────────
-echo.
-echo  Starting Collate...
-echo  Press Ctrl+C to stop.
-echo.
+:: ─── Build if needed ──────────────────────────────────────────────
+if not exist "dist\index.html" (
+    echo   Building production bundle...
+    echo.
+    call npm run build
+    if errorlevel 1 (
+        echo.
+        echo   Build failed. Check the output above.
+        pause
+        exit /b 1
+    )
+    echo.
+)
 
-cd /d "%~dp0web"
-
-:: Use vite preview (serves the dist folder on port 4173)
-:: Start it in the background, then open the browser
-start "" /B npx vite preview --port 5173 --strictPort
-
-:: Wait for server to start
-timeout /t 2 /nobreak >nul
-
-:: Open in default browser
+:: ─── Open browser first (server takes a moment) ──────────────────
+echo   Starting server...
 start "" "http://localhost:5173"
 
-echo  ───────────────────────────────────────────
-echo  Collate is running at http://localhost:5173
-echo  Close this window to stop the server.
-echo  ───────────────────────────────────────────
+:: ─── Serve using the local vite binary directly ───────────────────
+:: Using the local binary avoids npx resolution issues in CMD
+echo.
+echo   ─────────────────────────────────────────
+echo   Collate is running at http://localhost:5173
+echo   Press Ctrl+C or close this window to stop.
+echo   ─────────────────────────────────────────
 echo.
 
-:: Keep the window open (the server runs in background)
-:: When user closes window, the server process dies too
-cmd /k
+:: Run vite preview in the foreground — closing this window kills it
+call "node_modules\.bin\vite.cmd" preview --port 5173 --strictPort
