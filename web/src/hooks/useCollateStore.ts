@@ -82,6 +82,9 @@ interface CollateStore {
   /** Notification about newly added items — dismissed by user */
   newItemNotification: { count: number; filename: string } | null;
 
+  // Project management
+  currentProjectName: string | null;
+
   // Actions
   addDocument: (file: File) => Promise<void>;
   removeDocument: (filename: string) => void;
@@ -97,13 +100,46 @@ interface CollateStore {
   importFromJson: (json: string) => void;
   clearAll: () => void;
   loadFromStorage: () => void;
+  saveProject: (name: string) => void;
+  loadProject: (name: string) => void;
+  deleteProject: (name: string) => void;
+  newProject: () => void;
 }
 
 // ─── LocalStorage helpers ──────────────────────────────────────────
 
 const STORAGE_KEY = 'collate-state';
 const AUTOSAVE_KEY = 'collate-autosave';
+const PROJECTS_INDEX_KEY = 'collate-projects-index';
+const PROJECT_PREFIX = 'collate-project-';
 const AUTOSAVE_INTERVAL = 30_000; // Auto-save every 30 seconds
+
+// ─── Project management helpers ────────────────────────────────────
+
+export interface SavedProjectInfo {
+  name: string;
+  savedAt: string;
+  documentCount: number;
+  paragraphCount: number;
+  resolvedCount: number;
+  totalCount: number;
+}
+
+export function listSavedProjects(): SavedProjectInfo[] {
+  try {
+    const raw = localStorage.getItem(PROJECTS_INDEX_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as SavedProjectInfo[];
+  } catch {
+    return [];
+  }
+}
+
+function saveProjectIndex(projects: SavedProjectInfo[]) {
+  try {
+    localStorage.setItem(PROJECTS_INDEX_KEY, JSON.stringify(projects));
+  } catch { /* full */ }
+}
 
 interface PersistedState {
   manualComments: ManualComment[];
@@ -354,6 +390,7 @@ export const useCollateStore = create<CollateStore>((set, get) => ({
   currentView: 'landing',
   newItemIds: new Set(),
   newItemNotification: null,
+  currentProjectName: null,
 
   addDocument: async (file: File) => {
     set({ isLoading: true, loadingFile: file.name, error: null });
@@ -557,6 +594,7 @@ export const useCollateStore = create<CollateStore>((set, get) => ({
       currentView: 'landing',
       newItemIds: new Set(),
       newItemNotification: null,
+      currentProjectName: null,
     });
   },
 
@@ -576,6 +614,111 @@ export const useCollateStore = create<CollateStore>((set, get) => ({
     } catch {
       // Corrupted storage — ignore
     }
+  },
+
+  // ─── Project management ─────────────────────────────────────────
+
+  saveProject: (name: string) => {
+    const state = get();
+    const snapshot: SessionSnapshot = {
+      version: 2,
+      savedAt: new Date().toISOString(),
+      manualComments: state.manualComments,
+      statuses: Array.from(state.statuses.entries()),
+      reviewers: state.reviewers,
+      mergedParagraphs: state.mergedParagraphs,
+      documentFilenames: Array.from(state.documents.keys()),
+    };
+
+    try {
+      localStorage.setItem(PROJECT_PREFIX + name, JSON.stringify(snapshot));
+    } catch {
+      return; // Storage full
+    }
+
+    // Compute stats for index
+    let totalCount = 0;
+    let resolvedCount = 0;
+    for (const p of state.mergedParagraphs) {
+      const ids = [...p.track_changes.map(t => t.id), ...p.comments.map(c => c.id), ...p.manual_comments.map(m => m.id)];
+      totalCount += ids.length;
+      resolvedCount += ids.filter(id => { const s = state.statuses.get(id)?.status; return s && s !== 'unresolved'; }).length;
+    }
+
+    const projects = listSavedProjects().filter(p => p.name !== name);
+    projects.unshift({
+      name,
+      savedAt: snapshot.savedAt,
+      documentCount: snapshot.documentFilenames.length,
+      paragraphCount: snapshot.mergedParagraphs.length,
+      resolvedCount,
+      totalCount,
+    });
+    saveProjectIndex(projects);
+
+    set({ currentProjectName: name });
+  },
+
+  loadProject: (name: string) => {
+    try {
+      const raw = localStorage.getItem(PROJECT_PREFIX + name);
+      if (!raw) return;
+      const snapshot: SessionSnapshot = JSON.parse(raw);
+
+      set({
+        documents: new Map(),
+        documentMeta: new Map(),
+        baseDocument: null,
+        manualComments: snapshot.manualComments || [],
+        statuses: new Map(snapshot.statuses || []),
+        reviewers: snapshot.reviewers || [],
+        mergedParagraphs: snapshot.mergedParagraphs || [],
+        currentView: 'collate',
+        currentProjectName: name,
+        newItemIds: new Set(),
+        newItemNotification: null,
+        error: null,
+      });
+
+      startAutosave();
+    } catch {
+      set({ error: 'Failed to load project' });
+    }
+  },
+
+  deleteProject: (name: string) => {
+    localStorage.removeItem(PROJECT_PREFIX + name);
+    const projects = listSavedProjects().filter(p => p.name !== name);
+    saveProjectIndex(projects);
+  },
+
+  newProject: () => {
+    // Save current project automatically if it has content and a name
+    const state = get();
+    if (state.currentProjectName && state.mergedParagraphs.length > 0) {
+      state.saveProject(state.currentProjectName);
+    }
+
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(AUTOSAVE_KEY);
+    set({
+      documents: new Map(),
+      documentMeta: new Map(),
+      baseDocument: null,
+      mergedParagraphs: [],
+      manualComments: [],
+      statuses: new Map(),
+      reviewers: [],
+      isLoading: false,
+      loadingFile: null,
+      error: null,
+      activeFilter: 'all',
+      searchQuery: '',
+      currentView: 'collate',
+      newItemIds: new Set(),
+      newItemNotification: null,
+      currentProjectName: null,
+    });
   },
 }));
 

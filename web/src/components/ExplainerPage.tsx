@@ -1,5 +1,4 @@
 import { FileUpload } from './FileUpload';
-import { PrivacyBadge } from './PrivacyBadge';
 import {
   Shield,
   Upload,
@@ -9,11 +8,9 @@ import {
   Github,
   ArrowRight,
   User,
-  Sparkles,
   FileEdit,
   Scale,
   Brain,
-  FileText,
   Info,
 } from 'lucide-react';
 import { useRef } from 'react';
@@ -26,42 +23,7 @@ export function ExplainerPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg-main)' }}>
-      <PrivacyBadge />
-
-      {/* ─── Sticky header with branding ─────────────────────────── */}
-      <header
-        className="sticky top-0 z-40 no-print"
-        style={{
-          background: 'rgba(250, 250, 249, 0.85)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <div className="flex items-center justify-between" style={{ maxWidth: 880, margin: '0 auto', padding: '12px 24px' }}>
-          <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="Collate" style={{ width: 32, height: 32 }} />
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em' }}>
-              Collate
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <a
-              href="https://github.com/legalquant/Collate"
-              target="_blank"
-              rel="noopener"
-              className="btn btn-ghost btn-sm"
-              style={{ fontSize: '0.8125rem' }}
-            >
-              <Github className="w-4 h-4" />
-              GitHub
-            </a>
-            <button onClick={scrollToUpload} className="btn btn-primary btn-sm">
-              Start Collating
-            </button>
-          </div>
-        </div>
-      </header>
+    <div style={{ background: 'var(--bg-main)' }}>
 
       {/* ─── Hero ────────────────────────────────────────────────── */}
       <section style={{ padding: '72px 24px 48px', textAlign: 'center' }}>
