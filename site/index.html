@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collate — See every comment in one place</title>
+  <meta name="description" content="A browser-based document review checklist for litigation lawyers. Collate track changes, comments, and external feedback from multiple reviewers into a single view. Runs locally. Nothing leaves your browser.">
+  <meta property="og:title" content="Collate — See every comment in one place">
+  <meta property="og:description" content="Document review checklist for litigation lawyers. Track changes, comments, and phone notes collated by paragraph. Runs entirely in your browser.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://collate.law">
+  <meta property="og:image" content="https://collate.law/screenshots/og-image.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    /* ─── Reset & base ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #1e293b;
+      background: #fafaf9;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #0d9488; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    img { max-width: 100%; height: auto; display: block; }
+
+    /* ─── Layout ─────────────────────────────────────────────────── */
+    .container { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+    .container-wide { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 48px 0; }
+
+    /* ─── Typography ─────────────────────────────────────────────── */
+    h1 { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: #1e293b; }
+    h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; color: #1e293b; margin-bottom: 16px; }
+    h3 { font-size: 1.1rem; font-weight: 600; color: #1e293b; margin-bottom: 8px; }
+    .text-muted { color: #64748b; }
+    .text-sm { font-size: 0.9375rem; }
+    .text-xs { font-size: 0.8125rem; }
+
+    /* ─── Components ─────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 14px; border-radius: 9999px;
+      font-size: 0.75rem; font-weight: 600;
+      background: #f0fdfa; color: #0d9488;
+    }
+    .badge svg { width: 14px; height: 14px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px; border-radius: 8px;
+      font-size: 0.9375rem; font-weight: 600;
+      border: none; cursor: pointer; text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .btn-primary { background: #0d9488; color: white; }
+    .btn-primary:hover { background: #0f766e; text-decoration: none; }
+    .btn-secondary { background: white; color: #1e293b; border: 1px solid #e2e8f0; }
+    .btn-secondary:hover { background: #f8fafc; border-color: #cbd5e1; text-decoration: none; }
+    .btn-sm { padding: 8px 18px; font-size: 0.8125rem; }
+
+    .card {
+      background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .info-block {
+      padding: 20px 24px; border-radius: 12px; font-size: 0.9375rem;
+    }
+
+    /* ─── Hero ───────────────────────────────────────────────────── */
+    .hero { text-align: center; padding: 80px 0 48px; }
+    .hero h1 { margin-bottom: 16px; }
+    .hero .subtitle { font-size: 1.125rem; color: #64748b; max-width: 560px; margin: 0 auto 32px; line-height: 1.6; }
+    .hero .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* ─── Screenshots ────────────────────────────────────────────── */
+    .screenshot-grid {
+      display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 32px;
+    }
+    .screenshot {
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .screenshot img { width: 100%; }
+    .screenshot-placeholder {
+      background: #f1f5f9; display: flex; align-items: center; justify-content: center;
+      min-height: 320px; color: #94a3b8; font-size: 0.875rem;
+      border-radius: 12px; border: 2px dashed #cbd5e1;
+    }
+    .screenshot-caption {
+      padding: 12px 16px; font-size: 0.8125rem; color: #64748b;
+      background: #f8fafc; border-top: 1px solid #e2e8f0;
+    }
+
+    /* ─── Steps ──────────────────────────────────────────────────── */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .step { text-align: center; }
+    .step-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: #f0fdfa; display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px;
+    }
+    .step-icon svg { width: 24px; height: 24px; color: #0d9488; }
+    .step h3 { font-size: 0.9375rem; margin-bottom: 4px; }
+    .step p { font-size: 0.8125rem; color: #64748b; line-height: 1.5; }
+
+    /* ─── Download section ───────────────────────────────────────── */
+    .download {
+      text-align: center; padding: 48px 0;
+      background: white; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+    }
+    .download h2 { margin-bottom: 8px; }
+    .download .actions { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
+    .requirements {
+      margin-top: 24px; padding: 16px 20px; background: #f8fafc;
+      border-radius: 8px; display: inline-block; text-align: left;
+    }
+    .requirements code {
+      display: block; font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8125rem; color: #334155; padding: 2px 0;
+    }
+
+    /* ─── Philosophy ─────────────────────────────────────────────── */
+    .philosophy { background: white; border-top: 1px solid #e2e8f0; }
+    .trust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+    .trust-point {
+      display: flex; gap: 12px; padding: 14px; border-radius: 8px; background: #fafaf9;
+    }
+    .trust-point-icon {
+      width: 32px; height: 32px; border-radius: 6px; background: #f0fdfa;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .trust-point-icon svg { width: 16px; height: 16px; color: #0d9488; }
+    .trust-point h4 { font-size: 0.8125rem; font-weight: 600; margin-bottom: 2px; }
+    .trust-point p { font-size: 0.75rem; color: #64748b; line-height: 1.4; }
+
+    /* ─── Roadmap ────────────────────────────────────────────────── */
+    .roadmap-card {
+      border: 1px solid #0d9488; border-radius: 12px; padding: 24px; background: white;
+    }
+    .roadmap-card li { padding-left: 4px; margin-bottom: 8px; font-size: 0.9375rem; color: #475569; }
+    .roadmap-card li::marker { color: #0d9488; }
+
+    /* ─── Privacy ────────────────────────────────────────────────── */
+    .privacy-block {
+      background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 12px; padding: 24px;
+    }
+    .privacy-block p { color: #115e59; font-size: 0.9375rem; }
+
+    /* ─── Footer ─────────────────────────────────────────────────── */
+    footer {
+      padding: 32px 0; text-align: center;
+      font-size: 0.8125rem; color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+    }
+    footer a { color: #64748b; }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      h1 { font-size: 1.75rem; }
+      .hero .subtitle { font-size: 1rem; }
+      .steps { grid-template-columns: 1fr; }
+      .trust-grid { grid-template-columns: 1fr; }
+      .hero .actions { flex-direction: column; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Hero ─────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="container">
+      <div class="badge">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        100% local · Nothing leaves your browser
+      </div>
+      <h1>See every comment<br>in one place.</h1>
+      <p class="subtitle">
+        Drop in your marked-up drafts. See all feedback — track changes, comments, phone notes —
+        collated by paragraph with a resolution checklist. You decide what to accept. You make the edits yourself.
+      </p>
+      <div class="actions">
+        <a href="https://github.com/legalquant/Collate/releases" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </a>
+        <a href="https://github.com/legalquant/Collate" class="btn btn-secondary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+          Source Code
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── The problem ──────────────────────────────────────────────── -->
+  <section>
+    <div class="container">
+      <div class="card">
+        <p class="text-sm" style="color: #475569;">
+          You've sent a draft to four reviewers. Counsel rewrites paragraph 12 with track changes. The partner leaves a comment bubble disagreeing. The client calls to say you can't mention the audit. Your junior emails three typo fixes.
+        </p>
+        <p class="text-sm" style="color: #475569; margin-top: 12px;">
+          You now have four documents, two emails, a phone note, and no single view of what needs doing. Word's Combine function mangles the formatting. You start a spreadsheet to track what you've addressed. It's 7pm.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── How it works ─────────────────────────────────────────────── -->
+  <section>
+    <div class="container-wide">
+      <h2 style="text-align: center;">How it works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <h3>Upload drafts</h3>
+          <p>Drag and drop .docx files from different reviewers. Add phone notes and email comments manually.</p>
+        </div>
+        <div class="step">
+          <div class="step-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <h3>See everything</h3>
+          <p>Track changes, comments, and manual notes — all in one view, organised by paragraph. Conflicts flagged.</p>
+        </div>
+        <div class="step">
+          <div class="step-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <h3>Check off items</h3>
+          <p>Accept, reject, or defer every item. Add notes. Export a record of your decisions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Screenshots ──────────────────────────────────────────────── -->
+  <section>
+    <div class="container-wide">
+      <h2 style="text-align: center;">In action</h2>
+      <div class="screenshot-grid">
+        <div class="screenshot">
+          <!-- Replace with actual screenshot -->
+          <div class="screenshot-placeholder">
+            Screenshot: Main collated view with dark sidebar, paragraph cards, track changes, and comments
+          </div>
+          <div class="screenshot-caption">
+            The collated view — every piece of feedback from every reviewer, organised by paragraph with inline track changes and a resolution checklist.
+          </div>
+        </div>
+        <div class="screenshot">
+          <div class="screenshot-placeholder">
+            Screenshot: Wholesale paragraph insertion/deletion with green and red badges
+          </div>
+          <div class="screenshot-caption">
+            Wholesale changes — entire paragraphs added or deleted by a reviewer are flagged with dedicated badges and accept/reject controls.
+          </div>
+        </div>
+        <div class="screenshot">
+          <div class="screenshot-placeholder">
+            Screenshot: Landing page / explainer with privacy badge and upload area
+          </div>
+          <div class="screenshot-caption">
+            Everything runs locally. The parsing engine is Rust compiled to WebAssembly. No file is ever uploaded anywhere.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Download ─────────────────────────────────────────────────── -->
+  <section class="download" id="download">
+    <div class="container">
+      <h2>Download Collate</h2>
+      <p class="text-muted">Runs locally on your machine. No installation required — just Node.js.</p>
+      <div class="actions">
+        <a href="https://github.com/legalquant/Collate/releases" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Latest Release
+        </a>
+        <a href="https://github.com/legalquant/Collate" class="btn btn-secondary btn-sm">View on GitHub</a>
+      </div>
+      <div class="requirements">
+        <p class="text-xs text-muted" style="margin-bottom: 8px;"><strong>Quick start:</strong></p>
+        <code>git clone https://github.com/legalquant/Collate.git</code>
+        <code>cd Collate/web && npm install && npm run dev</code>
+        <p class="text-xs text-muted" style="margin-top: 8px;">Requires <a href="https://nodejs.org/">Node.js 18+</a>, <a href="https://rustup.rs/">Rust</a>, and <a href="https://rustwasm.github.io/wasm-pack/installer/">wasm-pack</a> to build from source.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Philosophy ───────────────────────────────────────────────── -->
+  <section class="philosophy">
+    <div class="container">
+      <h2>A checklist, not an autopilot</h2>
+      <p class="text-sm" style="color: #475569;">
+        Collate is deliberately not a redlining tool. It does not produce a merged document. It does not auto-accept changes. It does not generate a new .docx with everyone's edits baked in.
+      </p>
+      <p class="text-sm" style="color: #475569; margin-top: 12px;">
+        Automated document merging is fragile. Word's own Combine function routinely corrupts formatting and misaligns changes. In litigation, where a misplaced paragraph number or a broken cross-reference can undermine a filing, that risk is unacceptable.
+      </p>
+      <p class="text-sm" style="color: #475569; margin-top: 12px;">
+        Collate gives you a <strong>complete, structured view</strong> of every piece of feedback, organised by paragraph, with a resolution checklist. You then open your master draft in Word and make the edits yourself — with the confidence that you have seen every item and recorded your decision on each.
+      </p>
+
+      <div class="trust-grid">
+        <div class="trust-point">
+          <div class="trust-point-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <div>
+            <h4>You control the master</h4>
+            <p>Every edit in the final document is one you chose to make, in Word, with full formatting control.</p>
+          </div>
+        </div>
+        <div class="trust-point">
+          <div class="trust-point-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div>
+            <h4>Nothing is missed</h4>
+            <p>The checklist ensures every comment, every change, every phone note is explicitly addressed.</p>
+          </div>
+        </div>
+        <div class="trust-point">
+          <div class="trust-point-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4"/><path d="M12 16V8"/></svg>
+          </div>
+          <div>
+            <h4>Defensible process</h4>
+            <p>Export a complete record of what you accepted, rejected, and why. An audit trail for the file.</p>
+          </div>
+        </div>
+        <div class="trust-point">
+          <div class="trust-point-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <h4>Human judgment</h4>
+            <p>You decide which reviewer to follow when they disagree. No algorithm makes that call.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── AI roadmap ───────────────────────────────────────────────── -->
+  <section>
+    <div class="container">
+      <div class="roadmap-card">
+        <h2>Coming next: structured AI analysis</h2>
+        <p class="text-xs text-muted" style="margin-bottom: 16px;">Planned feature — not yet implemented</p>
+        <p class="text-sm" style="color: #475569; margin-bottom: 16px;">
+          A future update will add optional AI analysis of the collated output:
+        </p>
+        <ul style="padding-left: 20px;">
+          <li>Flag conflicts between reviewers — incompatible changes, contradictory comments</li>
+          <li>Identify cross-document inconsistencies — does accepting a change here contradict something elsewhere?</li>
+          <li>Highlight substantive issues — missing cross-references, undefined terms, unsupported claims</li>
+          <li>Suggest drafting improvements — document-type-aware, not generic text generation</li>
+        </ul>
+        <p class="text-sm" style="color: #475569; margin-top: 16px;">
+          AI analysis will be <strong>advisory, not executive</strong>. Suggestions appear alongside the checklist for you to consider. You review each one, accept or dismiss it, and make the edit yourself. The final document is always yours.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Privacy ──────────────────────────────────────────────────── -->
+  <section>
+    <div class="container">
+      <div class="privacy-block">
+        <h3 style="color: #0f766e; margin-bottom: 12px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Privacy
+        </h3>
+        <p>Collate processes your documents entirely on your machine. No file is uploaded to any server. No data is transmitted anywhere. The parsing engine runs locally in WebAssembly.</p>
+        <p style="margin-top: 8px;">A Content Security Policy header structurally prevents the browser from making outbound requests. This is not a promise — it is an architectural constraint enforced by the browser itself. Disconnect from the internet and the tool still works.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Limitations ──────────────────────────────────────────────── -->
+  <section>
+    <div class="container">
+      <div class="info-block" style="background: #fffbeb; border: 1px solid #fde68a;">
+        <h3 style="color: #92400e; font-size: 0.9375rem;">Limitations</h3>
+        <ul class="text-sm" style="color: #92400e; padding-left: 18px; margin-top: 8px;">
+          <li>Large documents (500+ pages) may be slow to parse</li>
+          <li>Complex nested track changes may not render perfectly</li>
+          <li>Only .docx format (not .doc or PDF)</li>
+          <li>Approximate paragraph matching across reviewer versions</li>
+          <li>Single-user tool — no real-time collaboration</li>
+          <li>Does not produce a merged output document — you edit the master in Word</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Built with ──────────────────────────────────────────────── -->
+  <section style="text-align: center;">
+    <div class="container">
+      <p class="text-sm text-muted">
+        A working proof of concept built by a practising UK litigator.
+        Rust + WebAssembly parsing engine. React interface.
+        Built using AI-assisted development with Cursor and Claude.
+      </p>
+      <p style="margin-top: 12px;">
+        <a href="https://github.com/legalquant/Collate" class="text-sm">Source Code</a>
+        &nbsp;·&nbsp;
+        <a href="https://twitter.com/anonlq" class="text-sm">@anonlq</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── Footer ───────────────────────────────────────────────────── -->
+  <footer>
+    <div class="container">
+      Collate — all processing performed locally on your machine. No data leaves your device.
+    </div>
+  </footer>
+
+</body>
+</html>
