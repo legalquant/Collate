@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+web/dist/
+crates/collate-core/target/
+
+# WASM build output (regenerated from Rust source)
+web/src/wasm-pkg/
+
+# Test fixtures (regenerated from script)
+tests/fixtures/*.docx
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
