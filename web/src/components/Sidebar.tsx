@@ -77,9 +77,7 @@ export function Sidebar() {
     >
       {/* Brand */}
       <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: '1px solid var(--border-sidebar)' }}>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm" style={{ background: 'var(--accent)' }}>
-          C
-        </div>
+        <img src="/logo.svg" alt="Collate" style={{ width: 32, height: 32 }} />
         <div>
           <div className="text-sm font-semibold" style={{ color: 'var(--text-sidebar-active)' }}>Collate</div>
           <div className="text-[10px]" style={{ color: 'var(--text-sidebar-muted)' }}>Document Review</div>
